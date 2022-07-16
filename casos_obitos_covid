@@ -1,0 +1,235 @@
+#      -----------------------------------------
+#      -         OBJETIVO DO TRABALHO          -
+#      -----------------------------------------
+
+# MAPEAR AS RELAÇÕES MENSAIS DOS OBITOS X CASOS DE COVID-19
+# NOS ANOS 2021 E 2022 DAS CIDADES DE BH, JF e UDIA
+
+# AUTOR: ARTHUR ALVES MARTINS
+
+# OBSERVAÇÃO: INICIANDOS OS ESTUDOS EM R, AINDA. 
+# OBSERVAÇÃO 2: O CÓDIGO AINDA ESTÁ SENDO COMENTADO E IDENTADO
+
+# BASES DE DADOS E RESULTADOS GRÁFICOS NO PERFIL (arquivo covid_analise.rar)
+
+setwd("C:\\Users\\Arthur Alves\\Desktop\\CAPACITAÇÃO\\R\\PROJETO COVID IGUATAMA")
+
+#bibliotecas usadas
+library("ggplot2")
+library("dplyr")
+library("lubridate")
+
+# Upando o número de casos
+
+dados_2021 = read.csv("Painel_2021.csv", encoding = "UTF-8", sep = ";", header = T)
+View(dados_2021)
+glimpse(dados_2021)
+colnames(dados_2021)[1] = "MUNICIPIO"
+dados_2021$DATA = as.Date(dados_2021$DATA, format = "%d/%m/%Y")
+
+dados_2022 = read.csv("Painel_2022.csv", encoding = "UTF-8", sep = ";", header = T)
+View(dados_2022)
+glimpse(dados_2022)
+colnames(dados_2022)[1] = "MUNICIPIO"
+dados_2022$DATA = as.Date(dados_2022$DATA, format = "%d/%m/%Y")
+
+Casos_Totais = bind_rows(dados_2021,dados_2022)
+glimpse(Casos_Totais)
+
+# Upando número de óbitos
+
+obitos_2021 = read.csv("Obitos_2021.csv", encoding = "UTF-8", sep = ";", header = T)
+View(dados_2021)
+glimpse(obitos_2021)
+colnames(obitos_2021)[1] = "MUNICIPIO"
+obitos_2021$DATA = as.Date(obitos_2021$DATA, format = "%d/%m/%Y")
+
+obitos_2022 = read.csv("Obitos_2022.csv", encoding = "UTF-8", sep = ";", header = T)
+View(dados_2022)
+glimpse(obitos_2022)
+colnames(obitos_2022)[1] = "MUNICIPIO"
+obitos_2022$DATA = as.Date(obitos_2022$DATA, format = "%d/%m/%Y")
+
+Obitos_Totais = bind_rows(obitos_2021,obitos_2022)
+glimpse(Obitos_Totais)
+
+# Unindo dados em um dataframe só
+
+dados_covid_mg = data.frame(Casos_Totais$MUNICIPIO,Casos_Totais$NUM_CASOS,Obitos_Totais$NUM_OBITOS,Casos_Totais[3:7])
+View(dados_covid_mg)
+colnames(dados_covid_mg)[1:4] = c("Município","Num_casos","Num_obitos","Data")
+
+dados_covid_mg[8] = month(dados_covid_mg$Data)
+dados_covid_mg[9] = year(dados_covid_mg$Data)
+colnames(dados_covid_mg)[8] = "Mês"
+colnames(dados_covid_mg)[9] = "Ano"
+
+# Processo de agrupamento mensal - estilo uma função que deva-se rodar cada vez
+# que necessite de agrupar uma cidade
+a=2021
+m=1
+primeiroano = c(1:12)
+segundoano = c(1:12)
+
+casos = data.frame(primeiroano,segundoano)
+
+
+  for (a in 2021:2022) { #AGRUPA AS OS CASOS POR MES DE UMA CIDADE 
+    for (m in 1:12) {
+      dados_sasd = sum(dados_covid_mg$Num_obitos[dados_covid_mg$Município == "UBERLANDIA" & dados_covid_mg$Ano == a & dados_covid_mg$Mês == m])
+      if (a == 2021){
+        casos$primeiroano[m] = dados_sasd
+      } else {
+        casos$segundoano[m] = dados_sasd
+      }
+      
+    }
+  }
+
+View(casos)
+
+casos_bh = stack(casos)
+casos_bh = data.frame(casos_bh[-2])
+casos_bh = data.frame(casos_bh$values[1:18])
+colnames(casos_bh)[1] = "casos"
+
+casos_jf = stack(casos)
+casos_jf = data.frame(casos_jf[-2])
+casos_jf = data.frame(casos_jf$values[1:18])
+colnames(casos_jf)[1] = "casos"
+
+casos_udi = stack(casos)
+casos_udi = data.frame(casos_udi[-2])
+casos_udi = data.frame(casos_udi$values[1:18])
+colnames(casos_udi)[1] = "casos"
+
+obitos_bh = stack(obitos)
+obitos_bh = data.frame(obitos_bh[-2])
+obitos_bh = data.frame(obitos_bh$values[1:18])
+colnames(obitos_bh)[1] = "obitos"
+
+obitos_jf = stack(obitos)
+obitos_jf = data.frame(obitos_jf[-2])
+obitos_jf = data.frame(obitos_jf$values[1:18])
+colnames(obitos_jf)[1] = "obitos"
+
+obitos_udi = stack(obitos)
+obitos_udi = data.frame(obitos_udi[-2])
+obitos_udi = data.frame(obitos_udi$values[1:18])
+colnames(obitos_udi)[1] = "obitos"
+
+
+# VARIÁVEIS A SEREM CRIADAS
+
+
+bh = data.frame(casos_bh,obitos_bh)
+glimpse(bh)
+View(bh)
+
+jf = data.frame(casos_jf,obitos_jf)
+glimpse(jf)
+View(jf)
+
+udi = data.frame(casos_udi,obitos_udi)
+glimpse(udi)
+View(udi)
+
+# CRIANDO OS GRÁFICOS
+
+# GRÁFICO DE LINHAS
+
+agregado = data.frame(bind_rows(bh,jf,udi))
+View(agregado)
+agregado$Município[1:18] = "BELO HORIZONTE"
+agregado$Município[19:36] = "JUIZ DE FORA"
+agregado$Município[37:54] = "UBERLANDIA"
+
+ggplot(agregado, aes(x = casos, y = obitos, color = Município)) +
+  geom_line(show.legend = T) +
+  labs(title = "Evolução dos óbitos em função dos casos de COVID-19",
+       subtitle = "Evolução Mensal de três grandes municípios de MG - 01/2021 a 06/2022",
+       caption = "Autor: Arthur Alves Martins",
+       x = "Casos",
+       y = "Óbitos") +
+  theme_gray()
+
+?geom_line
+## GRAFÍCO DE PONTOS
+
+ggplot(data = bh, mapping = aes(x = casos, y = obitos)) +
+  geom_point() +
+  labs(title = "Evolução dos obítos em função dos casos de COVID-19 - Belo Horizonte",
+       subtitle = "Points + Tendência (Casos Mensais de 01/2021 a 06/2022)",
+       caption = "Autor: Arthur Alves Martins",
+       x = "Casos",
+       y = "Óbitos")+
+  geom_smooth(method = "lm", col = "red") +
+  theme_gray()
+
+ggplot(data = jf, mapping = aes(x = casos, y = obitos)) +
+  geom_point() +
+  labs(title = "Evolução dos obítos em função dos casos de COVID-19 - Juiz de Fora",
+       subtitle = "Points + Tendência (Casos Mensais de 01/2021 a 06/2022)",
+       caption = "Autor: Arthur Alves Martins",
+       x = "Casos",
+       y = "Óbitos")+
+  geom_smooth(method = "lm", col = "purple") +
+  theme_gray()
+
+ggplot(data = udi, mapping = aes(x = casos, y = obitos)) +
+  geom_point() +
+  labs(title = "Evolução dos obítos em função dos casos de COVID-19 - Uberlândia",
+       subtitle = "Points + Tendência (Casos Mensais de 01/2021 a 06/2022)",
+       caption = "Autor: Arthur Alves Martins",
+       x = "Casos",
+       y = "Óbitos")+
+  geom_smooth(method = "lm", col = "yellow") +
+  theme_gray()
+?labs
+# HISTOGRAMAS
+
+bh$data[1] = "2020/01"
+bh$data[2] = "2020/02"
+bh$data[3] = "2020/03"
+bh$data[4] = "2020/04"
+bh$data[5] = "2020/05"
+bh$data[6] = "2020/06"
+bh$data[7] = "2020/07"
+bh$data[8] = "2020/08"
+bh$data[9] = "2020/09"
+bh$data[10] = "2020/10"
+bh$data[11] = "2020/11"
+bh$data[12] = "2020/12"
+bh$data[13] = "2021/01"
+bh$data[14] = "2021/02"
+bh$data[15] = "2021/03"
+bh$data[16] = "2021/04"
+bh$data[17] = "2021/05"
+bh$data[18] = "2021/06"
+
+jf$data = bh$data
+udi$data = bh$data
+
+ggplot(bh, aes(x = data, y = casos, fill = obitos)) +
+  geom_col(position = "dodge") +
+  labs(title = "Evolução dos casos mensais de COVID-19 pelo grau de óbitos - Belo Horizonte",
+       caption = "Autor: Arthur Alves Martins",
+       x = "Data",
+       y = "Casos") +
+  coord_flip()
+
+ggplot(jf, aes(x = data, y = casos, fill = obitos)) +
+  geom_col(position = "dodge") +
+  labs(title = "Evolução dos casos mensais de COVID-19 pelo grau de óbitos - Juiz de Fora",
+       caption = "Autor: Arthur Alves Martins",
+       x = "Data",
+       y = "Casos") +
+  coord_flip()
+
+ggplot(udi, aes(x = data, y = casos, fill = obitos)) +
+  geom_col(position = "dodge") +
+  labs(title = "Evolução dos casos mensais de COVID-19 pelo grau de óbitos - Uberlândia",
+       caption = "Autor: Arthur Alves Martins",
+       x = "Data",
+       y = "Casos") +
+  coord_flip()
